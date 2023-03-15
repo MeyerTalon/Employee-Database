@@ -23,3 +23,31 @@ const db = mysql.createConnection(
 //     const joinTables = await db.query('SELECT * FROM roles JOIN departments ON roles.departments = departmen.id');
 //     return joinTables;
 // };
+
+
+// Inquirer Section
+
+function inquirerPrompt() {
+  inquirer.prompt([
+      {
+        type: 'list',
+        message: "What would you like to do?",
+        name: 'choice',
+        choices: ['View All Employees', 'Add Employee', 'Update Employee Role', 'View All Roles', 'Add Role', 'View All Departments', 'Add Department', 'Quit'],
+    },
+  ])
+    .then((data) => {
+      if (data.choice === 'View All Employees') {
+        // db query to display employees
+        inquirerPrompt();
+      } else if (data.choice === 'Quit') {
+        console.log('System exited');
+      }
+      // Add if statements for each choice w/ necesary function calls
+      // Will call either another inquirer prompt function or a db query
+    });
+}
+
+
+
+inquirerPrompt();
