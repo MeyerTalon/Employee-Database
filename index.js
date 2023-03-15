@@ -19,3 +19,7 @@ const db = mysql.createConnection(
 
 // Query functions
 
+// const join = async () => {
+//     const joinTables = await db.query('SELECT * FROM roles JOIN departments ON roles.departments = departmen.id');
+//     return joinTables;
+// };
