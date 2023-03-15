@@ -1,1 +1,2 @@
-bruh
+// Query functions
+
