@@ -3,6 +3,8 @@
 const mysql = require('mysql2');
 const inquirer = require('inquirer');
 const consoleTable = require('console.table');
+const util = require('util');
+
 
 // SQL Database Connection
 
@@ -14,7 +16,7 @@ const db = mysql.createConnection(
       password: process.env.DB_PASSWORD,
       database: process.env.DB_NAME
     },
-    console.log("Connected to db")
+    console.log("Connected to database.")
 );
 
 // Query functions
@@ -25,29 +27,170 @@ const db = mysql.createConnection(
 // };
 
 
-// Inquirer Section
+// Inquirer Functions
 
-function inquirerPrompt() {
+// Adds an employee to 
+const addEmployeePrompt = (callback) => {
+  console.log('WELCOME TO THE EMPLOYEE DATABASE MANAGER!!!');
+  inquirer.prompt([
+    {
+      type: 'input',
+      name: 'firstName',
+      message: 'Enter the emplopyee\'s first name: ',
+      validate: (input) => {
+        if (input) {
+          return true;
+        } else {
+          console.log("Please enter the first name.");
+          return false;
+        }
+      }
+    },
+    {
+      type: 'input',
+      name: 'lastName',
+      message: 'Enter the emplopyee\'s last name: ',
+      validate: (input) => {
+        if (input) {
+          return true;
+        } else {
+          console.log("Please enter the last name.");
+          return false;
+        }
+      }
+    },
+    {
+      type: 'list',
+      message: 'Select the employee\'s role',
+      name: 'role',
+      choices: [1], //array of roles, tbc
+  },
+  {
+    type: 'list',
+    message: 'Select the employee\'s manager: ',
+    name: 'manager',
+    choices: [1], //array of manager names, tbc
+  }
+  ]).then((data) => {
+    console.log(`Employee ${data.firstName} ${data.lastName} has been added to the database.`);
+  }).then(callback);
+}
+
+const updateEmployeeRolePrompt = (callback) => {
+  inquirer.prompt([
+    {
+      type: 'list',
+      message: 'Select the employee to update: ',
+      name: 'employeeName',
+      choices: [1], //array of employee names, tbc
+    },
+    {
+      type: 'list',
+      message: 'Select the new employee\'s role: ',
+      name: 'employeeRole',
+      choices: [1], //array of roles, tbc
+    },
+  ]).then((data) => {
+    console.log(`Updated ${data.employeeName}'s information.`)
+  }).then(callback);
+}
+
+const addRolePrompt = (callback) => {
+  inquirer.prompt([
+    {
+      type: 'input',
+      message: 'Enter the new role\'s name: ',
+      name: 'roleName',
+      validate: (input) => {
+        if (input) {
+          return true;
+        } else {
+          console.log("Please enter the role name.");
+          return false;
+        }
+      },
+    },
+    {
+      type: 'input',
+      message: 'Enter the new role\'s salary: ',
+      name: 'salary',
+      validate: (input) => {
+        if (input) {
+          return true;
+        } else {
+          console.log("Please enter the role salary.");
+          return false;
+        }
+      },
+    },
+    {
+      type: 'list',
+      message: 'Select the new role\'s department: ',
+      name: 'roleDepartment',
+      choices: [1] // array of departments, tbc
+    }
+  ]).then((data) => {
+    console.log(`Added ${data.roleName} to the database.`)
+  }).then(callback);
+}
+
+const addDepartmentPrompt = (callback) => {
+  inquirer.prompt([
+    {
+      type: 'input',
+      message: 'Enter the new department\'s name: ',
+      name: 'departmentName',
+      validate: (input) => {
+        if (input) {
+          return true;
+        } else {
+          console.log("Please enter the department name.");
+          return false;
+        }
+      }
+    }
+  ]).then((data) => {
+    console.log(`Added ${data.departmentName} to the database.`)
+  }).then(callback);
+}
+
+const init = () => {
   inquirer.prompt([
       {
         type: 'list',
-        message: "What would you like to do?",
+        message: 'What would you like to do?',
         name: 'choice',
         choices: ['View All Employees', 'Add Employee', 'Update Employee Role', 'View All Roles', 'Add Role', 'View All Departments', 'Add Department', 'Quit'],
-    },
+    }
   ])
     .then((data) => {
       if (data.choice === 'View All Employees') {
         // db query to display employees
-        inquirerPrompt();
+        init(); // recursion go brrrr
+      } else if (data.choice === 'Add Employee') {
+        addEmployeePrompt(init);
+      } else if (data.choice === 'Update Employee Role') {
+        updateEmployeeRolePrompt(init);
+      } else if (data.choice === 'View All Roles') {
+        // db query to view all roles
+        init();
+      } else if (data.choice === 'Add Role') {
+        addRolePrompt(init);
+      } else if (data.choice === 'View All Departments') {
+        // db query to view all departments
+        init();
+      } else if (data.choice === 'Add Department') {
+        addDepartmentPrompt(init);
       } else if (data.choice === 'Quit') {
-        console.log('System exited');
+        console.log('System exited :)\nPress CTRL + C to return to the terminal.');
+      } else {
+        console.log('Something went wrong :(');
       }
       // Add if statements for each choice w/ necesary function calls
       // Will call either another inquirer prompt function or a db query
     });
 }
 
+// Initalizes the program
 
-
-inquirerPrompt();
+init();
