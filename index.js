@@ -2,9 +2,6 @@
 
 const mysql = require('mysql2');
 const inquirer = require('inquirer');
-const consoleTable = require('console.table');
-const util = require('util');
-
 
 // SQL Database Connection
 
@@ -15,11 +12,31 @@ const db = mysql.createConnection(
       user: process.env.DB_USER,
       password: process.env.DB_PASSWORD,
       database: process.env.DB_NAME
-    },
-    console.log("Connected to database.")
+    }
 );
+const dbPromise = db.promise();
+
 
 // Query functions
+
+const renderEmployeeTable = (callback) => {
+
+  db.query(`SELECT employees.id, employees.first_name, employees.last_name, roles.title, departments.department, roles.salary FROM employees JOIN roles ON employees.role_id = roles.id JOIN departments ON roles.department_id = departments.id`, async (err, results) => {
+    if (err) {
+      console.log(err);
+    }
+    // const tableData = results.reduce((acc, {id, ...x}) => {acc[id] = x; return acc}, {})
+    console.table(results);
+  });
+  setTimeout(callback, 100);
+}
+
+// db.query(`DELETE FROM course_names WHERE id = ?`, 3, (err, result) => {
+  //   if (err) {
+  //     console.log(err);
+  //   }
+  //   console.log(result);
+  // });
 
 // const join = async () => {
 //     const joinTables = await db.query('SELECT * FROM roles JOIN departments ON roles.departments = departmen.id');
@@ -31,7 +48,6 @@ const db = mysql.createConnection(
 
 // Adds an employee to 
 const addEmployeePrompt = (callback) => {
-  console.log('WELCOME TO THE EMPLOYEE DATABASE MANAGER!!!');
   inquirer.prompt([
     {
       type: 'input',
@@ -73,6 +89,7 @@ const addEmployeePrompt = (callback) => {
   }
   ]).then((data) => {
     console.log(`Employee ${data.firstName} ${data.lastName} has been added to the database.`);
+    // db query incoming
   }).then(callback);
 }
 
@@ -165,8 +182,7 @@ const init = () => {
   ])
     .then((data) => {
       if (data.choice === 'View All Employees') {
-        // db query to display employees
-        init(); // recursion go brrrr
+        renderEmployeeTable(init);
       } else if (data.choice === 'Add Employee') {
         addEmployeePrompt(init);
       } else if (data.choice === 'Update Employee Role') {
