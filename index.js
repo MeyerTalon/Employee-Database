@@ -53,22 +53,38 @@ db.query(`SELECT first_name, last_name FROM employees`, (err, results) => {
   }
 });
 
-// let managerNamesArray = [];
-// db.query(`SELECT first_name, last_name FROM employees WHERE id `, (err, results) => {
-//   if (err) {
-//     console.log(err);
-//   }
-//   let resultsArray = [];
-//   for (let i = 0; i < results.length; i++) {
-//     resultsArray.push(Object.values(results[i]));
-//     employeeNamesArray.push(resultsArray[i][0] + ' ' + resultsArray[i][1]);
-//   }
-// });
+let managerNamesArray = ['None'];
+db.query(`SELECT first_name, last_name FROM employees WHERE manager_id IS NULL`, (err, results) => {
+  if (err) {
+    console.log(err);
+  }
+  let resultsArray = [];
+  for (let i = 0; i < results.length; i++) {
+    resultsArray.push(Object.values(results[i]));
+    managerNamesArray.push(resultsArray[i][0] + ' ' + resultsArray[i][1]);
+  }
+});
+
+let managerIdArray = [];
+const populateManagerIdArray = () => {
+  managerIdArray = [];
+  db.query(`SELECT id FROM employees WHERE manager_id IS NULL`, (err, results) => {
+    if (err) {
+      console.log(err);
+    }
+    let resultsArray = [];
+    for (let i = 0; i < results.length; i++) {
+      resultsArray.push(Object.values(results[i]));
+      managerIdArray.push(resultsArray[i][0]);
+    }
+  });
+} 
+populateManagerIdArray();
 
 // Query functions
 
 const renderEmployeeTable = (callback) => {
-  db.query(`SELECT employees.id, employees.first_name, employees.last_name, roles.title, departments.department, roles.salary FROM employees JOIN roles ON employees.role_id = roles.id JOIN departments ON roles.department_id = departments.id`, (err, results) => {
+  db.query(`SELECT e.id, e.first_name, e.last_name, roles.title, departments.department, roles.salary, CONCAT(m.first_name, ' ', m.last_name) AS manager FROM employees e JOIN roles ON e.role_id = roles.id JOIN departments ON roles.department_id = departments.id LEFT JOIN employees m ON m.id = e.manager_id`, (err, results) => {
     if (err) {
       console.log(err);
     }
@@ -101,6 +117,11 @@ const addEmployee = (firstName, lastName, roleId, managerId) => {
   db.query(`INSERT INTO employees(first_name, last_name, role_id, manager_id) VALUES(?, ?, ?, ?)`, [firstName, lastName, roleId, managerId], (err) => {
     if (err) {
       console.log(err);
+    }
+    const fullName = firstName + " " + lastName;
+    employeeNamesArray.push(fullName);
+    if (managerId === null) {
+      managerNamesArray.push(fullName);
     }
   });
 }
@@ -177,17 +198,21 @@ const addEmployeePrompt = (callback) => {
       message: 'Select the employee\'s role',
       name: 'role',
       choices: roleNamesArray,
-  },
-  {
-    type: 'list',
-    message: 'Select the employee\'s manager: ',
-    name: 'manager',
-    choices: [1], //array of manager names, tbc
+    },
+    {
+      type: 'list',
+      message: 'Select the employee\'s manager: ',
+      name: 'manager',
+      choices: managerNamesArray,
   }
   ]).then((data) => {
-    addEmployee(data.firstName, data.lastName, roleNamesArray.indexOf(data.role) + 1)
+    if (data.manager === 'None') {
+      addEmployee(data.firstName, data.lastName, roleNamesArray.indexOf(data.role) + 1, null);
+    } else {
+      addEmployee(data.firstName, data.lastName, roleNamesArray.indexOf(data.role) + 1, managerIdArray[managerNamesArray.indexOf(data.manager) - 1]);
+    }
     console.log(`Employee ${data.firstName} ${data.lastName} has been added to the database.`);
-  }).then(callback);
+  }).then(populateManagerIdArray).then(callback);
 }
 
 const updateEmployeeRolePrompt = (callback) => {
@@ -207,8 +232,6 @@ const updateEmployeeRolePrompt = (callback) => {
   ]).then((data) => {
     updateEmployeeRole(employeeNamesArray.indexOf(data.employeeName) + 1, roleNamesArray.indexOf(data.employeeRole) + 1);
     console.log(`Employee ${data.employeeName}'s role has been updated.`);
-  }).then(() => {
-    
   }).then(callback);
 }
 
@@ -301,7 +324,7 @@ const init = () => {
         renderDepartmentsTable(init);
       } else if (data.choice === 'Add Department') {
         addDepartmentPrompt(init);
-      } else if (data.choice = 'View Utilized Budget of Department') {
+      } else if (data.choice === 'View Utilized Budget of Department') {
         viewDepartmentBudgetPrompt(init);
       } else if (data.choice === 'Quit') {
         console.log('System exited :)\nPress CTRL + C to return to the terminal.');
