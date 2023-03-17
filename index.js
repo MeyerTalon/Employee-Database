@@ -9,6 +9,7 @@ require('dotenv').config();
 const db = mysql.createConnection(
     {
       host: '127.0.0.1',
+      // User must create a .env file with these fields or replace these fields with their own username and password (database will always be employees_db).
       user: process.env.DB_USER,
       password: process.env.DB_PASSWORD,
       database: process.env.DB_NAME
