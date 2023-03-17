@@ -150,7 +150,7 @@ const updateEmployeeRole = (employeeId, roleId) => {
 }
 
 const renderBudget = async (departmentId, callback) => {
-  db.query(`(SELECT SUM(salary) FROM roles WHERE roles.department_id = ?)`, [departmentId], (err, results) => {
+  db.query(`(SELECT SUM(roles.salary) FROM employees JOIN roles ON employees.role_id = roles.id WHERE roles.id = employees.role_id AND roles.department_id = ?)`, [departmentId], (err, results) => {
     if (err) {
       console.log(err);
     }
@@ -324,7 +324,7 @@ const init = () => {
         renderDepartmentsTable(init);
       } else if (data.choice === 'Add Department') {
         addDepartmentPrompt(init);
-      } else if (data.choice === 'View Utilized Budget of Department') {
+      } else if (data.choice === 'View Utilized Budget of a Department') {
         viewDepartmentBudgetPrompt(init);
       } else if (data.choice === 'Quit') {
         console.log('System exited :)\nPress CTRL + C to return to the terminal.');
