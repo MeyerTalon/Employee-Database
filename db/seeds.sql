@@ -15,5 +15,11 @@ VALUES ("Sales Lead", 100000, 1),
        ("Lawyer", 100000, 4);
 
 INSERT INTO employees(first_name, last_name, role_id, manager_id)
-VALUES ("Joe", "Smith", 1, NULL),
-       ("Ronny", "McDonald", 3, 1);
+VALUES ("Spongebob", "Squarepants", 5, NULL),
+       ("Patrick", "Star", 3, 1),
+       ("Squidward", "Tentacles", 7, 1),
+       ("Kyle", "Broflovski", 6, NULL),
+       ("Eric", "Cartman", 7, 5),
+       ("Stan", "Marsh", 7, 5),
+       ("Rick", "Sanchez", 3, NULL),
+       ("Morty", "Sanchez", 4, 7);

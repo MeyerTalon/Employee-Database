@@ -14,39 +14,136 @@ const db = mysql.createConnection(
       database: process.env.DB_NAME
     }
 );
-const dbPromise = db.promise();
 
+// Creating arrays with names of SQL table columns to be used in inquirer prompts
+
+let roleNamesArray = [];
+db.query(`SELECT title FROM roles`, (err, results) => {
+  if (err) {
+    console.log(err);
+  }
+  let resultsArray = [];
+  for (let i = 0; i < results.length; i++) {
+    resultsArray.push(Object.values(results[i]));
+    roleNamesArray.push(resultsArray[i][0]);
+  }
+});
+
+let departmentNamesArray = [];
+db.query(`SELECT department FROM departments`, (err, results) => {
+  if (err) {
+    console.log(err);
+  }
+  let resultsArray = [];
+  for (let i = 0; i < results.length; i++) {
+    resultsArray.push(Object.values(results[i]));
+    departmentNamesArray.push(resultsArray[i][0]);
+  }
+});
+
+let employeeNamesArray = [];
+db.query(`SELECT first_name, last_name FROM employees`, (err, results) => {
+  if (err) {
+    console.log(err);
+  }
+  let resultsArray = [];
+  for (let i = 0; i < results.length; i++) {
+    resultsArray.push(Object.values(results[i]));
+    employeeNamesArray.push(resultsArray[i][0] + ' ' + resultsArray[i][1]);
+  }
+});
+
+// let managerNamesArray = [];
+// db.query(`SELECT first_name, last_name FROM employees WHERE id `, (err, results) => {
+//   if (err) {
+//     console.log(err);
+//   }
+//   let resultsArray = [];
+//   for (let i = 0; i < results.length; i++) {
+//     resultsArray.push(Object.values(results[i]));
+//     employeeNamesArray.push(resultsArray[i][0] + ' ' + resultsArray[i][1]);
+//   }
+// });
 
 // Query functions
 
 const renderEmployeeTable = (callback) => {
-
-  db.query(`SELECT employees.id, employees.first_name, employees.last_name, roles.title, departments.department, roles.salary FROM employees JOIN roles ON employees.role_id = roles.id JOIN departments ON roles.department_id = departments.id`, async (err, results) => {
+  db.query(`SELECT employees.id, employees.first_name, employees.last_name, roles.title, departments.department, roles.salary FROM employees JOIN roles ON employees.role_id = roles.id JOIN departments ON roles.department_id = departments.id`, (err, results) => {
     if (err) {
       console.log(err);
     }
-    // const tableData = results.reduce((acc, {id, ...x}) => {acc[id] = x; return acc}, {})
     console.table(results);
   });
   setTimeout(callback, 100);
 }
 
-// db.query(`DELETE FROM course_names WHERE id = ?`, 3, (err, result) => {
-  //   if (err) {
-  //     console.log(err);
-  //   }
-  //   console.log(result);
-  // });
+const renderRolesTable = (callback) => {
+  db.query(`SELECT roles.id, roles.title, departments.department, roles.salary FROM roles JOIN departments ON roles.department_id = departments.id`, (err, results) => {
+    if (err) {
+      console.log(err);
+    }
+    console.table(results);
+  });
+  setTimeout(callback, 100);
+}
 
-// const join = async () => {
-//     const joinTables = await db.query('SELECT * FROM roles JOIN departments ON roles.departments = departmen.id');
-//     return joinTables;
-// };
+const renderDepartmentsTable = (callback) => {
+  db.query(`SELECT * FROM departments`, (err, results) => {
+    if (err) {
+      console.log(err);
+    }
+    console.table(results);
+  });
+  setTimeout(callback, 100);
+}
 
+const addEmployee = (firstName, lastName, roleId, managerId) => {
+  db.query(`INSERT INTO employees(first_name, last_name, role_id, manager_id) VALUES(?, ?, ?, ?)`, [firstName, lastName, roleId, managerId], (err) => {
+    if (err) {
+      console.log(err);
+    }
+  });
+}
+const addRole = (title, salary, departmentId) => {
+  db.query(`INSERT INTO roles(title, salary, department_id) VALUES(?, ?, ?)`, [title, salary, departmentId], (err) => {
+    if (err) {
+      console.log(err);
+    }
+  });
+  roleNamesArray.push(title);
+}
+
+const addDepartment = (department) => {
+  db.query(`INSERT INTO departments(department) VALUES(?)`, [department], (err) => {
+    if (err) {
+      console.log(err);
+    }
+  });
+  departmentNamesArray.push(department);
+}
+
+const updateEmployeeRole = (employeeId, roleId) => {
+  db.query(`UPDATE employees SET role_id = ? WHERE id = ?`, [roleId, employeeId], (err) => {
+    console.log(err);
+  });
+}
+
+const renderBudget = async (departmentId, callback) => {
+  db.query(`(SELECT SUM(salary) FROM roles WHERE roles.department_id = ?)`, [departmentId], (err, results) => {
+    if (err) {
+      console.log(err);
+    }
+    const budget = Object.values(results[0]);
+    if (budget[0] === null) {
+      budget[0] = 0;
+    }
+    console.log("Total utilized budget: $" + budget[0]);
+    setTimeout(callback, 100);
+  });
+}
 
 // Inquirer Functions
 
-// Adds an employee to 
 const addEmployeePrompt = (callback) => {
   inquirer.prompt([
     {
@@ -57,7 +154,7 @@ const addEmployeePrompt = (callback) => {
         if (input) {
           return true;
         } else {
-          console.log("Please enter the first name.");
+          console.log("Please enter a valid first name.");
           return false;
         }
       }
@@ -70,7 +167,7 @@ const addEmployeePrompt = (callback) => {
         if (input) {
           return true;
         } else {
-          console.log("Please enter the last name.");
+          console.log("Please enter a valid last name.");
           return false;
         }
       }
@@ -79,7 +176,7 @@ const addEmployeePrompt = (callback) => {
       type: 'list',
       message: 'Select the employee\'s role',
       name: 'role',
-      choices: [1], //array of roles, tbc
+      choices: roleNamesArray,
   },
   {
     type: 'list',
@@ -88,8 +185,8 @@ const addEmployeePrompt = (callback) => {
     choices: [1], //array of manager names, tbc
   }
   ]).then((data) => {
+    addEmployee(data.firstName, data.lastName, roleNamesArray.indexOf(data.role) + 1)
     console.log(`Employee ${data.firstName} ${data.lastName} has been added to the database.`);
-    // db query incoming
   }).then(callback);
 }
 
@@ -99,16 +196,19 @@ const updateEmployeeRolePrompt = (callback) => {
       type: 'list',
       message: 'Select the employee to update: ',
       name: 'employeeName',
-      choices: [1], //array of employee names, tbc
+      choices: employeeNamesArray,
     },
     {
       type: 'list',
       message: 'Select the new employee\'s role: ',
       name: 'employeeRole',
-      choices: [1], //array of roles, tbc
+      choices: roleNamesArray,
     },
   ]).then((data) => {
-    console.log(`Updated ${data.employeeName}'s information.`)
+    updateEmployeeRole(employeeNamesArray.indexOf(data.employeeName) + 1, roleNamesArray.indexOf(data.employeeRole) + 1);
+    console.log(`Employee ${data.employeeName}'s role has been updated.`);
+  }).then(() => {
+    
   }).then(callback);
 }
 
@@ -122,7 +222,7 @@ const addRolePrompt = (callback) => {
         if (input) {
           return true;
         } else {
-          console.log("Please enter the role name.");
+          console.log("Please enter a valid role name.");
           return false;
         }
       },
@@ -132,11 +232,10 @@ const addRolePrompt = (callback) => {
       message: 'Enter the new role\'s salary: ',
       name: 'salary',
       validate: (input) => {
-        if (input) {
-          return true;
+        if (isNaN(input)) {
+          console.log(" Please enter a valid role salary.");
         } else {
-          console.log("Please enter the role salary.");
-          return false;
+          return true;
         }
       },
     },
@@ -144,10 +243,11 @@ const addRolePrompt = (callback) => {
       type: 'list',
       message: 'Select the new role\'s department: ',
       name: 'roleDepartment',
-      choices: [1] // array of departments, tbc
+      choices: departmentNamesArray
     }
   ]).then((data) => {
-    console.log(`Added ${data.roleName} to the database.`)
+    addRole(data.roleName, data.salary, departmentNamesArray.indexOf(data.roleDepartment) + 1);
+    console.log(`${data.roleName} has been added to the roles database.`)
   }).then(callback);
 }
 
@@ -155,20 +255,26 @@ const addDepartmentPrompt = (callback) => {
   inquirer.prompt([
     {
       type: 'input',
-      message: 'Enter the new department\'s name: ',
-      name: 'departmentName',
-      validate: (input) => {
-        if (input) {
-          return true;
-        } else {
-          console.log("Please enter the department name.");
-          return false;
-        }
-      }
+      message: 'Enter the new department name: ',
+      name: 'department',
     }
   ]).then((data) => {
-    console.log(`Added ${data.departmentName} to the database.`)
+    addDepartment(data.department);
+    console.log(`${data.departmentName} has been added to the departments database.`)
   }).then(callback);
+}
+
+const viewDepartmentBudgetPrompt = (callback) => {
+  inquirer.prompt([
+    {
+      type: 'list',
+      message: 'Select a department: ',
+      name: 'departmentName',
+      choices: departmentNamesArray
+    }
+  ]).then(async (data) => {
+    renderBudget(departmentNamesArray.indexOf(data.departmentName) + 1, callback);
+  });
 }
 
 const init = () => {
@@ -177,7 +283,7 @@ const init = () => {
         type: 'list',
         message: 'What would you like to do?',
         name: 'choice',
-        choices: ['View All Employees', 'Add Employee', 'Update Employee Role', 'View All Roles', 'Add Role', 'View All Departments', 'Add Department', 'Quit'],
+        choices: ['View All Employees', 'Add Employee', 'Update Employee Role', 'View All Roles', 'Add Role', 'View All Departments', 'Add Department', 'View Utilized Budget of a Department', 'Quit'],
     }
   ])
     .then((data) => {
@@ -188,22 +294,20 @@ const init = () => {
       } else if (data.choice === 'Update Employee Role') {
         updateEmployeeRolePrompt(init);
       } else if (data.choice === 'View All Roles') {
-        // db query to view all roles
-        init();
+        renderRolesTable(init);
       } else if (data.choice === 'Add Role') {
         addRolePrompt(init);
       } else if (data.choice === 'View All Departments') {
-        // db query to view all departments
-        init();
+        renderDepartmentsTable(init);
       } else if (data.choice === 'Add Department') {
         addDepartmentPrompt(init);
+      } else if (data.choice = 'View Utilized Budget of Department') {
+        viewDepartmentBudgetPrompt(init);
       } else if (data.choice === 'Quit') {
         console.log('System exited :)\nPress CTRL + C to return to the terminal.');
       } else {
         console.log('Something went wrong :(');
       }
-      // Add if statements for each choice w/ necesary function calls
-      // Will call either another inquirer prompt function or a db query
     });
 }
 
